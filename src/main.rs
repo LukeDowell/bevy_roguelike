@@ -12,42 +12,46 @@ fn main() {
     App::build()
         .add_plugins(DefaultPlugins)
         .add_startup_system(setup.system())
-        .add_system(position_sync.system())
         .add_system(input.system())
-        .add_resource(InputTimer(Timer::from_seconds(1.0, true)))
+        .add_system(sync_logical_position.system())
+        .insert_resource(InputTimer(Timer::from_seconds(0.5, true)))
         .run();
 }
 
 fn setup(cmd: &mut Commands, asset_server: Res<AssetServer>) {
-    cmd.spawn(Camera2dBundle::default())
-        .spawn(CameraUiBundle::default())
-        .spawn(TextBundle {
-            text: Text {
-                value: "@".to_string(),
-                font: asset_server.load("MajorMonoDisplay-Regular.ttf"),
-                style: TextStyle {
-                    color: Color::WHITE,
-                    font_size: 60.0,
-                    ..Default::default()
-                }
-            },
+    cmd.spawn(OrthographicCameraBundle::new_2d())
+        .spawn(Text2dBundle {
+            text: Text::with_section(
+                "@",
+                TextStyle {
+                    font: asset_server.load("MajorMonoDisplay-Regular.ttf"),
+                    font_size: 32.0,
+                    color: Color::WHITE
+                },
+                Default::default()
+            ),
             ..Default::default()
         })
-        .with(Position { x: 40.0, y: 25.0 });
+        .with(Position { x: 2.0, y: 3.0 })
+        .with(Player);
 
     for i in 0..10 {
-        cmd.spawn(TextBundle {
-            text: Text {
-                value: "%".to_string(),
-                font: asset_server.load("MajorMonoDisplay-Regular.ttf"),
-                style: TextStyle {
-                    color: Color::BLUE,
-                    font_size: 60.0,
-                    ..Default::default()
-                }
+        cmd.spawn(Text2dBundle {
+            text: Text::with_section(
+                "$",
+                TextStyle {
+                    font: asset_server.load("MajorMonoDisplay-Regular.ttf"),
+                    font_size: 32.0,
+                    color: Color::BLUE
+                },
+                Default::default()
+            ),
+            transform: Transform {
+                translation: Vec3::new(i as f32 * 32.0, 10.0, 0.0),
+                ..Default::default()
             },
             ..Default::default()
-        }).with(Position { x: i as f32 * 7.0, y: 20.0 });
+        }).with(Position { x: i as f32 , y: 3.0 });
     }
 }
 
@@ -63,25 +67,30 @@ fn input(time: Res<Time>,
 
     for (_player, mut position) in query.iter_mut() {
         if keyboard_input.pressed(KeyCode::Left) {
+            println!("left!");
             position.x -= 1.0;
         }
 
         if keyboard_input.pressed(KeyCode::Right) {
+            println!("right!");
             position.x += 1.0;
         }
 
         if keyboard_input.pressed(KeyCode::Up) {
+            println!("up!");
             position.y += 1.0;
         }
 
         if keyboard_input.pressed(KeyCode::Down) {
+            println!("down!");
             position.y -= 1.0;
         }
     }
 }
 
-fn position_sync(mut query: Query<(&Position, &mut Transform)>) {
-    for (position, mut transform) in query.iter_mut() {
-        transform.translation = Vec3::new(position.x * 20 as f32, position.y * 20 as f32, 0.0)
+fn sync_logical_position(mut query: Query<(&mut Transform, &Position)>) {
+    for (mut transform, position) in query.iter_mut() {
+        transform.translation.x = 32.0 * position.x;
+        transform.translation.y = 32.0 * position.y;
     }
 }
